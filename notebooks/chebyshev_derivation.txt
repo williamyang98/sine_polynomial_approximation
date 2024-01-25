@@ -1,0 +1,132 @@
+// Definition of Chebyshev polynomial
+Tn(cos(x)) = cos(nx)
+T0(cos(x)) = cos(0x) = 1
+T1(cos(x)) = cos(x)
+T2(cos(x)) = cos(2x) = 2cos(x)^2 - 1
+Let X = cos(x)
+- T0(X) = 1
+- T1(X) = X
+- T2(X) = 2X^2 - 1
+
+// Deriving trigonometric identities
+e^j(a+b) = e^ja * e^jb
+cis(a+b) = cis(a) * cis(b)
+cos(a+b) = cos(a)cos(b) - sin(a)sin(b)
+sin(a+b) = cos(a)sin(b) + sin(a)cos(b)
+
+e^j(a-b) = e^ja * e^j(-b)
+cis(a-b) = cis(a)*cis(-b)
+cos(a-b) = cos(a)cos(b) + sin(a)sin(b)
+sin(a-b) = -cos(a)sin(b) + sin(a)cos(b)
+
+cos(a+b) + cos(a-b) = 2cos(a)cos(b)
+cos(a)cos(b) = 1/2 * [ cos(a+b) + cos(a-b) ]
+
+cos((n+1)x) = cos(x)cos(nx) - sin(x)sin(nx)
+
+// Derive recursive definition for Chebyshev polynomials using trigonometric identities
+T_(n+1)(cos(x)) = cos((n+1)x) = cos(x)cos(nx) - sin(x)sin(nx)
+T_(n+1)(X) = X*Tn(X) - sin(x)sin(nx)
+
+T_(n-1)(cos(x)) = cos(-x)cos(nx) - sin(-x)sin(nx)
+T_(n-1)(X) = X*T_n(X) + sin(x)sin(nx)
+
+T_(n+1)(X) + T_(n-1)(X) = 2*X*T_n(X)
+T_(n+1)(X) = 2*X*T_n(X) - T_(n-1)(X)
+
+T3(X) = 2X*T2(X) - T1(X)
+T3(X) = 2X*(2X^2-1) - X 
+T3(X) = 4X^3 - 3X
+
+// Derivation of closed form solutions to cosine integrals
+cos(nx)*cos(mx)
+= 1/2 * [ cos((n+m)*x) + cos((n-m)*x) ]
+
+- Need to choose a monotonic slice since we are going to use substitution X = cos(x)
+- For this to work with an integral the mapping between X <-> cos(x) must be reversible
+int_0^pi cos(kx) dx = 0 | Integrals of harmonics are 0
+I(x) = int_0^pi cos(nx)cos(mx) dx 
+= int_0^pi 1/2 * [ cos((n+m)*x) + cos((n-m)*x) ] dx 
+when n != m, I(x) = int_0^pi 1/2 * [ cos(k1*x) + cos(k2*x) ] dx = 0
+when n == m, I(x) = int_0^pi 1/2 * [ cos(k1*x) + cos(0) ] dx = int_0^pi 1/2 dx = pi/2
+when n == m == 0, I(x) = int_0^pi 1/2 * [cos(0) + cos(0) ] dx = int_0^pi dx = pi
+ 
+// Expressing cosine integrals in terms of Chebyshev polynomials
+Letting X = cos(x)
+dX = -sin(x) dx | X^2 = cos^2(x) = 1-sin^2(x) | sin(x) = sqrt(1-X^2)
+dx = -1/sqrt(1-X^2) dX
+I(x) = int_1^-1 -Tn(X)*Tm(X)/sqrt(1-X^2) dX
+I(x) = int_-1^1 Tn(X)*Tm(X)/sqrt(1-X^2) dX
+when n != m, I(x) = 0
+when n == m, I(x) = pi/2
+when n == m == 0, I(x) = pi
+
+// Using closed form integral solutions to represent arbitrary functions as sum of Chebyshev polynomials
+- Approximate f(x) as a sum of Chebyshev polynomials
+f(x) = sum_n An*Tn(x)
+- Expanding the following integral with f(x) shows we can derive An for Tn(x)
+I(x) = int_-1^1 f(x)*Tm(x)/sqrt(1-x^2) dx
+I(x) = sum_n An int_-1^1 Tm(x)Tn(x)/sqrt(1-x^2) dx | substitute f(x) = sum_n An*Tn(x) | Notice the nested sum
+I(x) = sum_n An In(x) | In(x) = int_-1^1 Tm(x)Tn(x)/sqrt(1-x^2) dx
+- Substitute our closed form solutions to integrals involving Chebyshev polynomials
+when m != n, In(x) = 0 | This property is called orthoganality
+when m == n, In(x) = pi/2
+when m == n == 0, In(x) = pi
+- We can now solve for An for each unique value of n
+- Get rid of integrals with Tm(x)Tn(x) where m != n, since this will evaluate to 0
+I(x) = An In(x) | In(x) = int_-1^1 Tn(x)Tn(x)/sqrt(1-x^2) dx
+- We have In(x) solved and An is what we want
+- Solve for I(x) by using initial definition
+I(x) = int_-1^1 f(x)*Tn(x)/sqrt(1-x^2) dx where m == n | Initial definition
+I(x) = An*In(x) = int_-1^1 f(x)*Tn(x)/sqrt(1-x^2) dx
+An = 1/In(x) * int_-1^1 f(x)*Tn(x)/sqrt(1-x^2) dx
+where In(x) = pi/2 for n != 0
+      In(x) = pi   for n == 0
+
+// How do we calculate I(x) = int_-1^1 f(x)*Tn(x)/sqrt(1-x^2) dx ?
+- Tm(x) is a Chebyshev polynomial. I.e. Tn(x) = sum_i ai*x^i
+- Solve the integral as a sum of small integrals
+    - I(x) = sum_j int_aj^bj fj(x)*Tn(x)/sqrt(1-x^2) dx
+    - |bj-aj| == very small so we can use approximations for fj(x)
+- Use a good approximation for fj(x) in the range x in [aj,bj]
+  - Zero order hold: fj(x) = [f(aj)+f(bj)]/2
+    - Linear fit: fj(x) = m0 + m1*x where fj(aj)=f(aj) and fj(bj)=f(bj)
+    - Quadratic fit: fj(x) = m0 + m1*x + m2*x^2
+    - Notice all of these approximations are polynomials
+- If we approximate fj(x) between [aj,bj] as a polynomial, and Tn(x) is a Chebyshev polynomial
+    - Then Gj(x) = fj(x)*Tn(x) will also be a polynomial
+    - Gj(x) = sum_i ai*x^i
+I(x) = int_-1^1 f(x)*Tn(x)/sqrt(1-x^2) dx
+= sum_j int_aj^bj fj(x)*Tn(x)/sqrt(1-x^2) dx | x = [aj,bj] is our region where the polynomial fit fj(x) is made
+= sum_j int_aj^bj Gj(x)/sqrt(1-x^2) dx
+= sum_j int_aj^bj sum_i ai*x^i/sqrt(1-x^2) dx
+= sum_j sum_i ai * int_a^b x^i/sqrt(1-x^2) dx | ai is our polynomial coefficient
+
+// Deriving recursive closed form solution to integral of Jn(x) = x^n/sqrt(1-x^2)
+Jn(x) = int x^n / sqrt(1-x^2) dx 
+= int x^(n-1) * x / sqrt(1-x^2) dx
+- Using integral by parts: int u dv = uv - int v du
+- u = x^(n-1) | du = (n-1)*x^(n-2)
+- dv = x / sqrt(1-x^2) | v = -sqrt(1-x^2)
+Jn(x) = - x^(n-1) * sqrt(1-x^2) + int sqrt(1-x^2) * (n-1) * x^(n-2) dx
+= -x^(n-1) * sqrt(1-x^2) + (n-1) * int x^(n-2) * sqrt(1-x^2) dx 
+= -x^(n-1) * sqrt(1-x^2) + (n-1) * int x^(n-2) * (1-x^2) / sqrt(1-x^2) dx 
+= -x^(n-1) * sqrt(1-x^2) - (n-1) * int x^n / sqrt(1-x^2) dx + (n-1) * int x^(n-2) / sqrt(1-x^2) dx
+= -x^(n-1) * sqrt(1-x^2) - (n-1) In(x) + (n-1) J_(n-2)(x)
+Jn(x) = 1/n * [ -x^(n-1) * sqrt(1-x^2) + (n-1) * J_(n-2)(x) ]
+
+- Get initial solutions for recursive solution
+J0(x) = int 1 / sqrt(1-x^2) dx = arcsin(x)
+J1(x) = int x / sqrt(1-x^2) dx = -sqrt(1-x^2)
+
+// Putting all together
+An = 1/In(x) * int_-1^1 f(x)*Tn(x)/sqrt(1-x^2) dx
+An = 1/In(x) * I(x)
+where In(x) = pi/2 for n != 0
+      In(x) = pi   for n == 0
+
+I(x) = int_-1^1 f(x)*Tn(x)/sqrt(1-x^2) dx
+= sum_j sum_i ai * int_a^b x^i/sqrt(1-x^2) dx
+= sum_j sum_i ai * Ji(x)  
+- j = index of x = [aj,bj] where fj(x) approximates f(x)
+- i = power of polynomial coefficient in fj(x) = sum_i ai*x^i
