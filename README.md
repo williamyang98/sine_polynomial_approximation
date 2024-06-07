@@ -10,11 +10,12 @@ Derivation and benchmarking of Chebyshev polynomial approximation for sine.
 
 Refer to ```CMakePresets.json``` for all build presets for specific compilers.
 
-## Programs
+## Files
 | Name | Description |
 | --- | --- |
-| benchmark_chebyshev_sine | Benchmark various implementations of sine against each other |
-| derive_horner_polynomial | Use gradient descent to solve for best polynomial fit |
+| ```benchmark_chebyshev_sine.cpp``` | Benchmark various implementations of sine against each other |
+| ```derive_horner_polynomial.cpp``` | Use gradient descent to solve for best polynomial fit |
+| ```chebyshev_sine.h``` | Vectorised polynomial sine implementations for x86 (SSE,AVX) and aarch64 (Neon) |
 
 ## Notebooks
 1. Install python
