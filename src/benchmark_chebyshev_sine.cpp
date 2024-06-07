@@ -24,7 +24,7 @@
         #define SSE_MATHFUN_WITH_CODE
         #include "./sse_mathfun.h"
     #endif
-    #if defined(__AVX__)
+    #if defined(__AVX2__)
         #include "./avx_mathfun.h"
     #endif
 #endif
@@ -87,7 +87,7 @@ int main(int /*argc*/, char** /*argv*/) {
             for (size_t i = 0; i < TOTAL_SAMPLES; i++) {
                 constexpr float SCALE = 2.0f*float(M_PI);
                 float x = X[i];
-                // Reference should be as accurate as possible
+                // // Reference should be as accurate as possible
                 if constexpr(NORMALISE_INPUT) {
                     x = x - std::round(x);
                 }
@@ -215,7 +215,7 @@ int main(int /*argc*/, char** /*argv*/) {
         }
     })
     #endif
-    #if defined(__AVX__)
+    #if defined(__AVX2__)
     RUN_BENCHMARK("mathfun_avx", {
         for (size_t iter = 0; iter < TOTAL_TRIALS; iter++) {
             constexpr size_t STRIDE = sizeof(__m256)/sizeof(float);

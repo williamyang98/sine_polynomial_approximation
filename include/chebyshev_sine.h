@@ -17,7 +17,7 @@ constexpr static std::array<float, 6> CHEBYSHEV_POLYNOMIAL_COEFFICIENTS = \
 
 // NOTE: Manually unrolling the loop might be required on some compilers 
 //       i.e. For scalar sine MSVC can vectorise manually unrolled code
-static float chebyshev_sine(float x) {
+static inline float chebyshev_sine(float x) {
     const float z = x*x;
     // g(x) = sum ai*x^2i
     constexpr int N = int(CHEBYSHEV_POLYNOMIAL_COEFFICIENTS.size());
@@ -62,7 +62,7 @@ static inline __m256 _mm256_chebyshev_sine(__m256 x) {
     #if defined(__FMA__)
         #define __muladd(a,b,c) _mm256_fmadd_ps(a,b,c)
     #else
-        #define __muladd(a,b,c) _mm256_add_ps(_mm_mul_ps(a,b),c)
+        #define __muladd(a,b,c) _mm256_add_ps(_mm256_mul_ps(a,b),c)
     #endif
     const __m256 z = _mm256_mul_ps(x,x);
     // g(x) = sum ai*x^2i
