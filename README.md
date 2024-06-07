@@ -35,6 +35,7 @@ Refer to ```CMakePresets.json``` for all build presets for specific compilers.
 - Using 32bit floats
 - Samples = 8192
 - Trials = 102400
+- Input normalisation = false
 - Data collected from ```src/benchmark_chebyshev_sine.cpp```.
 
 ```clang version 16.0.5 target: x86_64-pc-windows-msvc```

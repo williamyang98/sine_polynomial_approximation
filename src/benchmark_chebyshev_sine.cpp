@@ -41,23 +41,41 @@ static float calculate_error(tcb::span<const float> X, tcb::span<const float> Y)
 }
 
 int main(int /*argc*/, char** /*argv*/) {
-    constexpr size_t TOTAL_SAMPLES = 8192;
+    constexpr size_t TOTAL_SAMPLES = 8192; // should satisfy SIMD alignment
     constexpr size_t TOTAL_TRIALS = 10240;
-    using Alloc = aligned_allocator<float, 32>; // avx2 32byte alignment
+    // Perform normalisation for polynomial approximation so that input lies within [-0.5,+0.5]
+    // Turn this on to benchmark normalisation if your inputs need to be normalised
+    constexpr bool NORMALISE_INPUT = false;
+
+    constexpr size_t SIMD_ALIGNMENT = 32; // avx2 32byte alignment
+    static_assert((TOTAL_SAMPLES*sizeof(float) % SIMD_ALIGNMENT) == 0, "Number of samples must satisfy SIMD alignment");
+    using Alloc = aligned_allocator<float, SIMD_ALIGNMENT>;
     auto X = std::vector<float, Alloc>(TOTAL_SAMPLES); // sin(2*pi*x)
     auto X_svml = std::vector<float, Alloc>(TOTAL_SAMPLES); // sin(x)
     auto Y_std = std::vector<float, Alloc>(TOTAL_SAMPLES);
     auto Y_benchmark = std::vector<float, Alloc>(TOTAL_SAMPLES);
     {
-        const float step = 1.0f/float(TOTAL_SAMPLES);
+        float x_range = 1.0f;
+        if constexpr(NORMALISE_INPUT) {
+            // NOTE: Some sine approximations may explictly do normalisation or they might degrade at larger inputs
+            //       We benchmark if sine approximation can maintain accuracy over a large range
+            x_range = 10.0f*x_range;
+        }
+        const float x_min = -x_range/2.0f;
+        const float step = x_range/float(TOTAL_SAMPLES);
         constexpr float SCALE = 2.0f*float(M_PI);
         for (size_t i = 0; i < TOTAL_SAMPLES; i++) {
-            X[i] = -0.5f + step*float(i);
+            X[i] = x_min + step*float(i);
             X_svml[i] = SCALE*X[i];
         }
     }
 
-    printf("[PROGRESS]\n");
+    printf("[PARAMETERS]\n");
+    printf("total_samples   = %zu\n", TOTAL_SAMPLES);
+    printf("total_trials    = %zu\n", TOTAL_TRIALS);
+    printf("normalise_input = %s\n", NORMALISE_INPUT ? "true" : "false");
+
+    printf("\n[PROGRESS]\n");
     uint64_t time_std_ns;
     // Reference example that we compare everything to
     {
@@ -67,7 +85,12 @@ int main(int /*argc*/, char** /*argv*/) {
         for (size_t iter = 0; iter < TOTAL_TRIALS; iter++) {
             for (size_t i = 0; i < TOTAL_SAMPLES; i++) {
                 constexpr float SCALE = 2.0f*float(M_PI);
-                Y_std[i] = std::sin(SCALE*X[i]);
+                float x = X[i];
+                // Reference should be as accurate as possible
+                if constexpr(NORMALISE_INPUT) {
+                    x = x - std::round(x);
+                }
+                Y_std[i] = std::sin(SCALE*x);
             }
         }
         time_std_ns = timer.get_delta();
@@ -96,7 +119,11 @@ int main(int /*argc*/, char** /*argv*/) {
     RUN_BENCHMARK("cheby_scalar", {
         for (size_t iter = 0; iter < TOTAL_TRIALS; iter++) {
             for (size_t i = 0; i < TOTAL_SAMPLES; i++) {
-                Y_benchmark[i] = chebyshev_sine(X[i]);
+                float x = X[i];
+                if constexpr(NORMALISE_INPUT) {
+                    x = x - std::round(x);
+                }
+                Y_benchmark[i] = chebyshev_sine(x);
             }
         }
     })
@@ -106,6 +133,10 @@ int main(int /*argc*/, char** /*argv*/) {
             constexpr size_t STRIDE = sizeof(__m128)/sizeof(float);
             for (size_t i = 0; i < TOTAL_SAMPLES; i+=STRIDE) {
                 __m128 x = _mm_load_ps(&X[i]);
+                if constexpr(NORMALISE_INPUT) {
+                    constexpr int ROUND_FLAGS = _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC;
+                    x = _mm_sub_ps(x, _mm_round_ps(x, ROUND_FLAGS));
+                }
                 __m128 y = _mm_chebyshev_sine(x);
                 _mm_store_ps(&Y_benchmark[i], y);
             }
@@ -118,6 +149,10 @@ int main(int /*argc*/, char** /*argv*/) {
             constexpr size_t STRIDE = sizeof(__m256)/sizeof(float);
             for (size_t i = 0; i < TOTAL_SAMPLES; i+=STRIDE) {
                 __m256 x = _mm256_load_ps(&X[i]);
+                if constexpr(NORMALISE_INPUT) {
+                    constexpr int ROUND_FLAGS = _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC;
+                    x = _mm256_sub_ps(x, _mm256_round_ps(x, ROUND_FLAGS));
+                }
                 __m256 y = _mm256_chebyshev_sine(x);
                 _mm256_store_ps(&Y_benchmark[i], y);
             }
@@ -131,6 +166,9 @@ int main(int /*argc*/, char** /*argv*/) {
             constexpr size_t STRIDE = sizeof(float32x4_t)/sizeof(float);
             for (size_t i = 0; i < TOTAL_SAMPLES; i+=STRIDE) {
                 float32x4_t x = vld1q_f32(&X[i]);
+                if constexpr(NORMALISE_INPUT) {
+                    x = vsubq_f32(x, vrndaq_f32(x));
+                }
                 float32x4_t y = vsineq_f32(x);
                 vst1q_f32(&Y_benchmark[i], y);
             }
