@@ -2,7 +2,7 @@
 #include "./simd_flags.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "./aligned_allocator.h"
+#include "./aligned_allocator.hpp"
 #include "./chebyshev_sine.h"
 #include "./span.h"
 #include "./timer.h"
@@ -42,18 +42,19 @@ static float calculate_error(tcb::span<const float> X, tcb::span<const float> Y)
 
 int main(int /*argc*/, char** /*argv*/) {
     constexpr size_t TOTAL_SAMPLES = 8192; // should satisfy SIMD alignment
-    constexpr size_t TOTAL_TRIALS = 10240;
+    constexpr size_t TOTAL_TRIALS = 102400;
     // Perform normalisation for polynomial approximation so that input lies within [-0.5,+0.5]
     // Turn this on to benchmark normalisation if your inputs need to be normalised
     constexpr bool NORMALISE_INPUT = false;
 
     constexpr size_t SIMD_ALIGNMENT = 32; // avx2 32byte alignment
     static_assert((TOTAL_SAMPLES*sizeof(float) % SIMD_ALIGNMENT) == 0, "Number of samples must satisfy SIMD alignment");
-    using Alloc = aligned_allocator<float, SIMD_ALIGNMENT>;
-    auto X = std::vector<float, Alloc>(TOTAL_SAMPLES); // sin(2*pi*x)
-    auto X_svml = std::vector<float, Alloc>(TOTAL_SAMPLES); // sin(x)
-    auto Y_std = std::vector<float, Alloc>(TOTAL_SAMPLES);
-    auto Y_benchmark = std::vector<float, Alloc>(TOTAL_SAMPLES);
+    using Alloc = AlignedAllocator<float>;
+    auto allocator = Alloc(SIMD_ALIGNMENT);
+    auto X = std::vector<float, Alloc>(TOTAL_SAMPLES, allocator); // sin(2*pi*x)
+    auto X_svml = std::vector<float, Alloc>(TOTAL_SAMPLES, allocator); // sin(x)
+    auto Y_std = std::vector<float, Alloc>(TOTAL_SAMPLES, allocator);
+    auto Y_benchmark = std::vector<float, Alloc>(TOTAL_SAMPLES, allocator);
     {
         float x_range = 1.0f;
         if constexpr(NORMALISE_INPUT) {
